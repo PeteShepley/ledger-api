@@ -1,9 +1,9 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   bigint,
+  check,
   date,
   index,
-  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -12,22 +12,25 @@ import {
 
 // See ledger-api-plan.md (repo root) for the design this implements.
 
-export const accountType = pgEnum("account_type", [
-  "asset",
-  "liability",
-  "income",
-  "expense",
-]);
-
-export const accounts = pgTable("accounts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull().unique(),
-  type: accountType("type").notNull(),
-  currency: text("currency").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const accounts = pgTable(
+  "accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull().unique(),
+    // Plain text + CHECK, not a Postgres enum: drizzle-orm's aws-data-api/pg
+    // driver doesn't cast parameters to a custom enum type on insert
+    // (`column "type" is of type account_type but expression is of type
+    // text`), a real error only surfaced against the deployed Data API —
+    // node-postgres (used in tests) doesn't hit this. A CHECK constraint
+    // gives the same DB-level value enforcement without the cast problem.
+    type: text("type").notNull(),
+    currency: text("currency").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [check("accounts_type_check", sql`${table.type} in ('asset', 'liability', 'income', 'expense')`)],
+);
 
 export const transactions = pgTable("transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
