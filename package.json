@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "^3.1085.0",
