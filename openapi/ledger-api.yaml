@@ -1,0 +1,414 @@
+openapi: 3.0.3
+info:
+  title: Ledger API
+  version: "1.0.0"
+  description: |
+    A small double-entry bookkeeping service: accounts, transactions, and
+    the entries that belong to them. Entries are immutable and append-only
+    — balances are always derived by summing entries, never stored and
+    mutated directly. Every transaction's entries must sum to exactly zero
+    (enforced both in application code and by a database constraint).
+
+    This API is meant to be called by other services/applications in this
+    account, not by end users directly — see the `awsSigv4` security scheme
+    below.
+  contact:
+    name: Pete Shepley
+    url: https://peteshepley.com
+  license:
+    name: Source
+    url: https://github.com/PeteShepley/ledger-api
+
+servers:
+  - url: https://ledger.api.peteshepley.com
+    description: Production
+  # Default API Gateway invoke URL is only known after the first `tofu
+  # apply` of infra/apis/ledger-api — add it here once deployed, same as
+  # resume-api's second `servers` entry.
+
+security:
+  - awsSigv4: []
+
+tags:
+  - name: Accounts
+    description: Asset, liability, income, and expense accounts.
+  - name: Transactions
+    description: Immutable, zero-sum double-entry postings.
+  - name: Balances
+    description: Derived balances, current or as of a given date.
+
+paths:
+  /accounts:
+    post:
+      operationId: createAccount
+      tags: [Accounts]
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "201":
+          description: Account created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+    get:
+      operationId: listAccounts
+      tags: [Accounts]
+      summary: List all accounts
+      responses:
+        "200":
+          description: All accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+
+  /accounts/{id}:
+    get:
+      operationId: getAccount
+      tags: [Accounts]
+      summary: Get an account
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /accounts/{id}/balance:
+    get:
+      operationId: getAccountBalance
+      tags: [Balances]
+      summary: Get an account's balance
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/AsOf"
+      responses:
+        "200":
+          description: The account's balance, current or as of the given date.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Balance"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /accounts/{id}/entries:
+    get:
+      operationId: listAccountEntries
+      tags: [Accounts]
+      summary: List an account's entries
+      description: Paginated, most-recent-first by effective_date.
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: A page of the account's entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntriesPage"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /transactions:
+    post:
+      operationId: postTransaction
+      tags: [Transactions]
+      summary: Post a transaction
+      description: |
+        Requires an `idempotency_key`. Posting the same key twice returns
+        the original transaction unchanged with `200`, rather than
+        double-posting — safe to retry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Transaction posted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "200":
+          description: Replay of an existing transaction (duplicate idempotency_key).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [Transactions]
+      summary: Get a transaction and its entries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The transaction with its entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /balances:
+    get:
+      operationId: listBalances
+      tags: [Balances]
+      summary: List every account's balance
+      parameters:
+        - $ref: "#/components/parameters/AsOf"
+      responses:
+        "200":
+          description: Every account's balance, current or as of the given date.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Balances"
+
+components:
+  securitySchemes:
+    awsSigv4:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: awsSigv4
+      description: >-
+        AWS Signature Version 4, signed with the caller's own IAM
+        credentials — no shared secret. The caller's IAM principal needs a
+        policy granting `execute-api:Invoke` on this API's ARN.
+
+  parameters:
+    AccountId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AsOf:
+      name: as_of
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+      description: >-
+        Interpreted end-of-day inclusive (effective_date <= as_of). Omit
+        for "now."
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  responses:
+    NotFound:
+      description: No account or transaction exists with that id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unprocessable:
+      description: >-
+        Entries don't sum to zero, fewer than 2 entries, currency
+        mismatch, unknown account, or a malformed account payload.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+          description: Present on request-validation failures (zod's flattened error shape).
+
+    AccountType:
+      type: string
+      enum: [asset, liability, income, expense]
+
+    AccountInput:
+      type: object
+      required: [name, type, currency]
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/AccountType"
+        currency:
+          type: string
+          description: ISO 4217, e.g. `USD`. Single currency per account.
+          example: USD
+    Account:
+      allOf:
+        - $ref: "#/components/schemas/AccountInput"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+
+    EntryInput:
+      type: object
+      required: [account_id, amount]
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: Signed, minor units (cents).
+    Entry:
+      allOf:
+        - $ref: "#/components/schemas/EntryInput"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            transaction_id:
+              type: string
+              format: uuid
+            effective_date:
+              type: string
+              format: date
+            created_at:
+              type: string
+              format: date-time
+
+    TransactionInput:
+      type: object
+      required: [idempotency_key, entries]
+      properties:
+        idempotency_key:
+          type: string
+        description:
+          type: string
+        effective_date:
+          type: string
+          format: date
+          description: Defaults to today (UTC) if omitted.
+        entries:
+          type: array
+          minItems: 2
+          items:
+            $ref: "#/components/schemas/EntryInput"
+          description: Amounts must sum to exactly zero.
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        description:
+          type: string
+          nullable: true
+        idempotency_key:
+          type: string
+        effective_date:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entry"
+
+    Balance:
+      type: object
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        as_of:
+          type: string
+          format: date
+        balance:
+          type: integer
+
+    AccountBalance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currency:
+          type: string
+        balance:
+          type: integer
+
+    Balances:
+      type: object
+      properties:
+        as_of:
+          type: string
+          format: date
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountBalance"
+
+    EntriesPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entry"
+        limit:
+          type: integer
+        offset:
+          type: integer
