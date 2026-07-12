@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "start:local": "npm run build && sam local start-api --docker-network ledger-api_default"
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "^3.1085.0",

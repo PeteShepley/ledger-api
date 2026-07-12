@@ -34,12 +34,9 @@ export function getDb(): Database {
     return cached;
   }
 
-  const connectionString = process.env["DATABASE_URL"];
-  if (!connectionString) {
-    throw new Error(
-      "Set RESOURCE_ARN + SECRET_ARN (Data API) or DATABASE_URL (local Postgres) before calling getDb().",
-    );
-  }
+  const connectionString =
+    process.env["DATABASE_URL"] ??
+    "postgres://postgres:postgres@localhost:5432/ledger";
 
   cached = drizzleNodePostgres({
     client: new Pool({ connectionString }),

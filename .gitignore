@@ -2,3 +2,4 @@ node_modules/
 dist/
 .placeholder.zip
 *.log
+.aws-sam/

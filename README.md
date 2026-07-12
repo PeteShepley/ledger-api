@@ -41,10 +41,51 @@ tests/                  vitest, against a real local Postgres (see design.md's "
 | `npm install`         | Install dependencies                                                                            |
 | `npm run lint`        | Lint (oxlint)                                                                                   |
 | `npm run typecheck`   | Typecheck                                                                                       |
-| `npm test`            | Run tests — needs `DATABASE_URL` pointed at a local Postgres                                    |
+| `docker compose up -d`| Start a local Postgres for tests (matches CI: `postgres:16`, db `ledger`, user/pass `postgres`) |
+| `npm test`            | Run tests — needs `DATABASE_URL` pointed at a local Postgres (defaults to the compose instance) |
 | `npm run build`       | Bundle `src/index.ts` into `dist/index.mjs` (esbuild)                                           |
 | `npm run db:generate` | Generate a migration from `src/schema.ts`                                                       |
 | `npm run db:migrate`  | Apply migrations — targets Data API if `RESOURCE_ARN`/`SECRET_ARN` are set, else `DATABASE_URL` |
+| `npm run start:local` | Build, then serve the real Lambda handler behind a local API Gateway emulator (see below)        |
+
+## Local development
+
+`npm run start:local` runs the app the way it actually runs in prod — the
+built `dist/index.mjs` Lambda handler, invoked in a containerized Lambda
+runtime behind a local HTTP API Gateway emulator (`sam local start-api`,
+via `template.yaml`) — rather than a plain Node dev server. That means
+requests go through the same `APIGatewayProxyEventV2`
+translation/`hono/aws-lambda` code path production traffic does, so
+payload-shape bugs show up locally instead of only after deploy.
+
+Requires [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+(`brew install aws-sam-cli`) and Docker. One-time setup:
+
+```bash
+docker compose up -d                                                  # start Postgres
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/ledger \
+  npm run db:migrate                                                  # apply migrations
+```
+
+Then:
+
+```bash
+npm run start:local   # serves http://127.0.0.1:3000
+curl -X POST http://127.0.0.1:3000/accounts \
+  -H 'content-type: application/json' \
+  -d '{"name": "cash", "type": "asset", "currency": "USD"}'
+```
+
+`template.yaml` points the function at `postgres://postgres:postgres@postgres:5432/ledger`
+— the `sam local` container joins the compose project's Docker network
+(`--docker-network ledger-api_default`, wired into the npm script) and
+reaches Postgres by its compose service name, not `localhost`.
+
+Not covered: `AWS_IAM` auth. In prod that's enforced by API Gateway
+before the Lambda is ever invoked, and `sam local` doesn't emulate
+authorizers at all — there's no app-level auth behavior to exercise
+either way. See `operations/docs/runbooks/ledger-api-deployment.md` for
+testing SigV4-signed requests against a deployed stack.
 
 ## Endpoints
 

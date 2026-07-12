@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Local-only SAM template for ledger-api. Mirrors the shape of
+  operations/infra/apis/ledger-api's HTTP API + Lambda (nodejs22.x,
+  AWS_PROXY, payload format 2.0) so `sam local start-api` exercises the
+  same event translation and handler code path the real deployment does.
+  Not deployed anywhere — Terraform in the operations repo owns the real
+  infrastructure; this only ever runs via `sam local`.
+
+  AWS_IAM auth is intentionally not configured here: `sam local start-api`
+  doesn't enforce authorizers regardless, and in prod that check happens
+  at API Gateway before the Lambda is ever invoked, so there's no
+  app-level behavior to exercise locally either way.
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 10
+    MemorySize: 256
+
+Resources:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: dist/
+      Environment:
+        Variables:
+          # Points at the docker-compose Postgres (docker-compose.yml)
+          # over its service name, not localhost — sam local runs this
+          # function in its own container, joined to that compose
+          # project's network via --docker-network.
+          DATABASE_URL: postgres://postgres:postgres@postgres:5432/ledger
+      Events:
+        Proxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
