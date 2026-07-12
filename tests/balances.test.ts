@@ -19,7 +19,10 @@ describe("balances", () => {
 
   it("reflects posted transactions across all accounts", async () => {
     const cash = await createAccount({ name: `cash-${randomUUID()}` });
-    const revenue = await createAccount({ name: `revenue-${randomUUID()}`, type: "income" });
+    const revenue = await createAccount({
+      name: `revenue-${randomUUID()}`,
+      type: "income",
+    });
 
     await postTransaction({
       idempotency_key: "bal-1",
@@ -30,14 +33,22 @@ describe("balances", () => {
     });
 
     const res = await get("/balances");
-    const byId = Object.fromEntries(res.body.accounts.map((a: { id: string; balance: number }) => [a.id, a.balance]));
+    const byId = Object.fromEntries(
+      res.body.accounts.map((a: { id: string; balance: number }) => [
+        a.id,
+        a.balance,
+      ]),
+    );
     expect(byId[cash.body.id]).toBe(300);
     expect(byId[revenue.body.id]).toBe(-300);
   });
 
   it("as_of is inclusive of that exact date and excludes the day before", async () => {
     const cash = await createAccount({ name: `cash-${randomUUID()}` });
-    const revenue = await createAccount({ name: `revenue-${randomUUID()}`, type: "income" });
+    const revenue = await createAccount({
+      name: `revenue-${randomUUID()}`,
+      type: "income",
+    });
 
     await postTransaction({
       idempotency_key: "bal-2",
@@ -48,13 +59,19 @@ describe("balances", () => {
       ],
     });
 
-    const before = await get(`/accounts/${cash.body.id}/balance?as_of=2024-06-14`);
+    const before = await get(
+      `/accounts/${cash.body.id}/balance?as_of=2024-06-14`,
+    );
     expect(before.body.balance).toBe(0);
 
-    const onDate = await get(`/accounts/${cash.body.id}/balance?as_of=2024-06-15`);
+    const onDate = await get(
+      `/accounts/${cash.body.id}/balance?as_of=2024-06-15`,
+    );
     expect(onDate.body.balance).toBe(100);
 
-    const after = await get(`/accounts/${cash.body.id}/balance?as_of=2024-06-16`);
+    const after = await get(
+      `/accounts/${cash.body.id}/balance?as_of=2024-06-16`,
+    );
     expect(after.body.balance).toBe(100);
   });
 

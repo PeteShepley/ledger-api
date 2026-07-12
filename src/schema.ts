@@ -29,7 +29,12 @@ export const accounts = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [check("accounts_type_check", sql`${table.type} in ('asset', 'liability', 'income', 'expense')`)],
+  (table) => [
+    check(
+      "accounts_type_check",
+      sql`${table.type} in ('asset', 'liability', 'income', 'expense')`,
+    ),
+  ],
 );
 
 export const transactions = pgTable("transactions", {

@@ -48,9 +48,7 @@
       "uniqueConstraints": {
         "accounts_name_unique": {
           "name": "accounts_name_unique",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "nullsNotDistinct": false
         }
       },
@@ -143,26 +141,18 @@
         "entries_transaction_id_transactions_id_fk": {
           "name": "entries_transaction_id_transactions_id_fk",
           "tableFrom": "entries",
-          "columnsFrom": [
-            "transaction_id"
-          ],
+          "columnsFrom": ["transaction_id"],
           "tableTo": "transactions",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "entries_account_id_accounts_id_fk": {
           "name": "entries_account_id_accounts_id_fk",
           "tableFrom": "entries",
-          "columnsFrom": [
-            "account_id"
-          ],
+          "columnsFrom": ["account_id"],
           "tableTo": "accounts",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -216,9 +206,7 @@
       "uniqueConstraints": {
         "transactions_idempotency_key_unique": {
           "name": "transactions_idempotency_key_unique",
-          "columns": [
-            "idempotency_key"
-          ],
+          "columns": ["idempotency_key"],
           "nullsNotDistinct": false
         }
       },
@@ -231,12 +219,7 @@
     "public.account_type": {
       "name": "account_type",
       "schema": "public",
-      "values": [
-        "asset",
-        "liability",
-        "income",
-        "expense"
-      ]
+      "values": ["asset", "liability", "income", "expense"]
     }
   },
   "schemas": {},

@@ -5,8 +5,14 @@ import { describe, expect, it } from "vitest";
 import { createAccount, get, postTransaction } from "./helpers.js";
 
 async function twoUsdAccounts() {
-  const cash = await createAccount({ name: `cash-${randomUUID()}`, type: "asset" });
-  const revenue = await createAccount({ name: `revenue-${randomUUID()}`, type: "income" });
+  const cash = await createAccount({
+    name: `cash-${randomUUID()}`,
+    type: "asset",
+  });
+  const revenue = await createAccount({
+    name: `revenue-${randomUUID()}`,
+    type: "income",
+  });
   return { cash: cash.body, revenue: revenue.body };
 }
 
@@ -69,8 +75,14 @@ describe("POST /transactions", () => {
   });
 
   it("rejects a currency mismatch across accounts in one transaction", async () => {
-    const usd = await createAccount({ name: `usd-${randomUUID()}`, currency: "USD" });
-    const eur = await createAccount({ name: `eur-${randomUUID()}`, currency: "EUR" });
+    const usd = await createAccount({
+      name: `usd-${randomUUID()}`,
+      currency: "USD",
+    });
+    const eur = await createAccount({
+      name: `eur-${randomUUID()}`,
+      currency: "EUR",
+    });
 
     const res = await postTransaction({
       idempotency_key: "bad-4",

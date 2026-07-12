@@ -37,7 +37,7 @@ tests/                  vitest, against a real local Postgres (see design.md's "
 ## Commands
 
 | Command               | Action                                                                                          |
-|:----------------------|:------------------------------------------------------------------------------------------------|
+| :-------------------- | :---------------------------------------------------------------------------------------------- |
 | `npm install`         | Install dependencies                                                                            |
 | `npm run lint`        | Lint (oxlint)                                                                                   |
 | `npm run typecheck`   | Typecheck                                                                                       |

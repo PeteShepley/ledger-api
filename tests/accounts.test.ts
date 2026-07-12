@@ -6,9 +6,17 @@ import { createAccount, get, postTransaction } from "./helpers.js";
 
 describe("accounts", () => {
   it("creates and fetches an account", async () => {
-    const created = await createAccount({ name: "cash", type: "asset", currency: "USD" });
+    const created = await createAccount({
+      name: "cash",
+      type: "asset",
+      currency: "USD",
+    });
     expect(created.status).toBe(201);
-    expect(created.body).toMatchObject({ name: "cash", type: "asset", currency: "USD" });
+    expect(created.body).toMatchObject({
+      name: "cash",
+      type: "asset",
+      currency: "USD",
+    });
 
     const fetched = await get(`/accounts/${created.body.id}`);
     expect(fetched.status).toBe(200);

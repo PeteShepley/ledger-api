@@ -23,9 +23,13 @@ if (resourceArn && secretArn) {
   });
   await migrateDataApi(db, { migrationsFolder: "./drizzle" });
 } else {
-  const connectionString = process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/ledger";
+  const connectionString =
+    process.env.DATABASE_URL ??
+    "postgres://postgres:postgres@localhost:5432/ledger";
   const pool = new Pool({ connectionString });
-  await migrateNodePostgres(drizzleNodePostgres({ client: pool }), { migrationsFolder: "./drizzle" });
+  await migrateNodePostgres(drizzleNodePostgres({ client: pool }), {
+    migrationsFolder: "./drizzle",
+  });
   await pool.end();
 }
 
