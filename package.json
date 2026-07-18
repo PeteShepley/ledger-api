@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Double-entry bookkeeping API for accounts, transactions, and entries — TypeScript on AWS Lambda, Aurora Serverless v2 (Postgres) via the RDS Data API, IAM-authenticated API Gateway.",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/index.mjs --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "build": "esbuild src/index.ts --bundle --minify --platform=node --target=node22 --format=esm --outfile=dist/index.mjs --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "build:local-handler": "esbuild local/handler.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/local-handler.mjs --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "lint": "oxlint",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -13,13 +14,14 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
-    "start:local": "npm run build && sam local start-api --docker-network ledger-api_default"
+    "start:local": "npm run build && npm run build:local-handler && sam local start-api --docker-network ledger-api_default"
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "^3.1085.0",
     "@hono/zod-validator": "^0.8.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.29",
+    "pino": "^10.3.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -10,8 +10,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-// See ledger-api-plan.md (repo root) for the design this implements.
-
 export const accounts = pgTable(
   "accounts",
   {

@@ -1,17 +1,21 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Local-only SAM template for ledger-api. Mirrors the shape of
-  operations/infra/apis/ledger-api's HTTP API + Lambda (nodejs22.x,
-  AWS_PROXY, payload format 2.0) so `sam local start-api` exercises the
-  same event translation and handler code path the real deployment does.
-  Not deployed anywhere — Terraform in the operations repo owns the real
-  infrastructure; this only ever runs via `sam local`.
+  Local-only SAM template for ledger-api. Mirrors the shape of the
+  production HTTP API + Lambda (nodejs22.x, AWS_PROXY, payload format 2.0)
+  — infrastructure that's provisioned and deployed separately, outside
+  this repo — so `sam local start-api` exercises the same event
+  translation and handler code path production traffic does. Not deployed
+  anywhere itself; this only ever runs via `sam local`.
 
-  AWS_IAM auth is intentionally not configured here: `sam local start-api`
-  doesn't enforce authorizers regardless, and in prod that check happens
-  at API Gateway before the Lambda is ever invoked, so there's no
-  app-level behavior to exercise locally either way.
+  Prod's real auth (AWS_IAM/SigV4, enforced by API Gateway before the
+  Lambda is invoked) can't be emulated by `sam local` — it doesn't enforce
+  authorizers at all. So the local handler (local/handler.ts, built to
+  dist/local-handler.mjs) wraps the real app with its own from-scratch
+  SigV4 check instead of using index.handler directly, giving local dev
+  the same "unsigned/invalid request -> rejected, valid -> passes through"
+  shape without touching prod code. See README.md's Auth section for how
+  to sign local requests.
 
 Globals:
   Function:
@@ -23,7 +27,7 @@ Resources:
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: index.handler
+      Handler: local-handler.handler
       CodeUri: dist/
       Environment:
         Variables:
@@ -32,6 +36,9 @@ Resources:
           # function in its own container, joined to that compose
           # project's network via --docker-network.
           DATABASE_URL: postgres://postgres:postgres@postgres:5432/ledger
+          # Prod defaults to "info" (see src/lib/logger.ts); local dev
+          # wants the verbose per-request detail on by default.
+          LOG_LEVEL: debug
       Events:
         Proxy:
           Type: HttpApi

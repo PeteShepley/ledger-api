@@ -4,6 +4,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../db.js";
 import { computeBalance, getAccountOrThrow, today } from "../lib/ledger.js";
+import type { AppEnv } from "../lib/logger.js";
 import { json } from "../lib/response.js";
 import {
   asOfQuerySchema,
@@ -14,7 +15,7 @@ import {
 } from "../lib/validation.js";
 import { accounts, entries } from "../schema.js";
 
-const app = new Hono();
+const app = new Hono<AppEnv>();
 
 app.post("/", zJson(createAccountSchema), async (c) => {
   const db = getDb();
@@ -22,6 +23,10 @@ app.post("/", zJson(createAccountSchema), async (c) => {
     .insert(accounts)
     .values(c.req.valid("json"))
     .returning();
+  c.get("logger").info(
+    { account_id: account!.id, type: account!.type },
+    "account created",
+  );
   return json(c, account, 201);
 });
 
@@ -46,6 +51,10 @@ app.get(
     const account = await getAccountOrThrow(db, c.req.valid("param").id);
     const asOf = c.req.valid("query").as_of ?? today();
     const balance = await computeBalance(db, account.id, asOf);
+    c.get("logger").debug(
+      { account_id: account.id, as_of: asOf },
+      "computed balance",
+    );
     return json(c, { account_id: account.id, as_of: asOf, balance });
   },
 );
@@ -65,6 +74,10 @@ app.get(
       .orderBy(desc(entries.effectiveDate), desc(entries.createdAt))
       .limit(limit)
       .offset(offset);
+    c.get("logger").debug(
+      { account_id: account.id, limit, offset },
+      "listed entries",
+    );
     return json(c, { items: rows, limit, offset });
   },
 );

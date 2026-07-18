@@ -14,17 +14,19 @@ info:
     below.
   contact:
     name: Pete Shepley
-    url: https://peteshepley.com
+    url: https://github.com/PeteShepley/ledger-api
   license:
     name: Source
     url: https://github.com/PeteShepley/ledger-api
 
 servers:
-  - url: https://ledger.api.peteshepley.com
-    description: Production
-  # Default API Gateway invoke URL is only known after the first `tofu
-  # apply` of infra/apis/ledger-api — add it here once deployed, same as
-  # resume-api's second `servers` entry.
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com
+    description: Production — replace with your deployed API Gateway invoke URL (or a custom domain, if you set one up).
+    variables:
+      apiId:
+        default: your-api-id
+      region:
+        default: us-east-1
 
 security:
   - awsSigv4: []

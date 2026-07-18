@@ -11,7 +11,7 @@ export const accountTypeSchema = z.enum([
 export const createAccountSchema = z.object({
   name: z.string().min(1),
   type: accountTypeSchema,
-  // ISO 4217, e.g. "USD" — single currency per account (ledger-api-plan.md).
+  // ISO 4217, e.g. "USD" — single currency per account.
   currency: z
     .string()
     .regex(/^[A-Z]{3}$/, "currency must be a 3-letter ISO 4217 code"),
@@ -67,10 +67,9 @@ export const zIdParam = zValidator(
   },
 );
 
-// Body-validation failures map to 422 (ledger-api-plan.md's error contract),
-// not zod-validator's default 400 — covers "entries don't sum to zero,
-// fewer than 2 entries, currency mismatch, unknown account" and malformed
-// account payloads alike.
+// Body-validation failures map to 422, not zod-validator's default 400 —
+// covers "entries don't sum to zero, fewer than 2 entries, currency
+// mismatch, unknown account" and malformed account payloads alike.
 export const zJson = <T extends z.ZodType>(schema: T) =>
   zValidator("json", schema, (result, c) => {
     if (!result.success) {

@@ -3,6 +3,7 @@ import { drizzle as drizzleDataApi } from "drizzle-orm/aws-data-api/pg";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
+import { logger } from "./lib/logger.js";
 import * as schema from "./schema.js";
 
 export type Database =
@@ -31,6 +32,7 @@ export function getDb(): Database {
       resourceArn,
       schema,
     });
+    logger.info({ driver: "aws-data-api" }, "database client initialized");
     return cached;
   }
 
@@ -42,5 +44,6 @@ export function getDb(): Database {
     client: new Pool({ connectionString }),
     schema,
   });
+  logger.info({ driver: "node-postgres" }, "database client initialized");
   return cached;
 }

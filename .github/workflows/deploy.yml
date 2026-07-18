@@ -36,8 +36,8 @@ jobs:
 
       # Applied against the Data API before the code that depends on it
       # goes live — same reasoning as running Django/Rails migrations
-      # ahead of a code deploy. infra/apis/ledger-api's Terraform owns the
-      # cluster/secret; this only ever runs `drizzle-kit migrate`.
+      # ahead of a code deploy. The Aurora cluster/secret are provisioned
+      # separately (outside this repo); this only ever runs the migrator.
       - name: Run database migrations
         run: npm run db:migrate
         env:
